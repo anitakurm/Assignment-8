@@ -1,0 +1,128 @@
+---
+title: "Assignment 5 - Meta-analysis of pitch in schizophrenia"
+author: "Riccardo Fusaroli"
+date: "3/7/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Building on the shoulders of giants: meta-analysis
+
+## Questions to be answered
+
+1. What is the current evidence for distinctive patterns of pitch mean and pitch sd in schizophrenia? Report how many papers report quantitative estimates, your method to analyze them, the estimated effect size of the difference (mean effect size and standard error for pitch mean, same for pitch sd) and forest plots representing it. 
+
+2. Do the results match your own analysis from Assignment 3? If you add your results to the meta-analysis, do the estimated effect sizes change? Report the new estimates and the new forest plots.
+
+3. Assess the quality of the literature: report and comment on heterogeneity of the studies (tau, I2), on publication bias (funnel plot), and on influential studies.
+
+## Tips on the process to follow:
+
+- Download the data on all published articles analyzing pitch in schizophrenia: https://www.dropbox.com/s/pmgw8wzc308so1p/Data.csv?dl=0
+- Following the procedure in the slides calculate effect size and standard error of the effect size per each study. N.B. we focus on pitch mean and pitch standard deviation.
+ . first try using lmer (to connect to what you know of mixed effects models)
+ . then use rma() (to get some juicy additional statistics)
+
+- Build a forest plot of the results (forest(model))
+ 
+- Go back to Assignment 3, add your own study to the data table, and re-run meta-analysis. Do the results change?
+
+- Now look at the output of rma() and check tau and I2
+
+
+
+```{r}
+#Libraries
+library(metafor)
+library(lme4)
+library(lmerTest)
+
+#Read data
+d = read.csv("data.csv", header = T, sep = ";")
+d$Article = as.character(d$Article)
+#Create datasets with effect sizes and variances
+#For Pitch Mean
+d_PM = escalc('SMD',
+              n1i= SampleSizeSchizo,
+              n2i= SampleSizeContros, 
+              m1i= PitchMeanControls, 
+              m2i= PitchMeanSchizo, 
+              sd1i=PitchMeanControlsSD, 
+              sd2i=PitchMeanSchizoSD,
+              data = d) 
+
+#For Pitch Standard Deviation
+d_PSD = escalc('SMD', 
+               n1i= SampleSizeSchizo,
+               n2i=SampleSizeContros,
+               m1i= PitchSDControls, 
+               m2i= PitchSDSchizo, 
+               sd1i=PitchSDControlsSD, 
+               sd2i=PitchSDSchizoSD, 
+               data = d) 
+
+#Do rma
+m_PM = rma(yi, vi, data = d_PM, slab = Article)
+m_PM
+
+m_PSD = rma(yi, vi, data = d_PSD, slab = Article)
+m_PSD
+
+#Get forest plot
+forest(m_PM)
+forest(m_PSD)
+
+```
+
+```{r}
+#QUESTION 2:
+
+#Read in data from assignment 3
+d_A3 = read.csv("final_rqa.csv")
+
+#Make models for acoustic features:
+#For pitch mean
+m_A3_PM = lmer(scale(mean) ~ diagnosis + (1+diagnosis|participant), d_A3)
+Output_PM = summary(m_A3_PM)
+#And for pitch SD
+m_A3_PSD = lmer(scale(stdDev) ~ diagnosis + (1+diagnosis|participant), d_A3)
+Output_PSD = summary(m_A3_PSD)
+
+#Save the effect size and the variance
+#for pitch mean
+yi_A3_PM = Output_PM$coefficients[2]
+vi_A3_PM = 0.2796
+#And for pitch SD
+yi_A3_PSD = Output_PSD$coefficients[2]
+vi_A3_PSD = 0.2806
+
+#Make rows with new data, and appedn it to datasets
+#for pitch mean
+A3_PM=c(3, 2017, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, yi_A3_PM, vi_A3_PM)
+d_PM2 = rbind(d_PM, A3_PM)
+#And for pitch SD
+A3_PSD=c(3, 2017, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, yi_A3_PSD, vi_A3_PSD)
+d_PSD2 = rbind(d_PSD, A3_PSD)
+
+
+#Do rma
+m_PM2 = rma(yi, vi, data = d_PM2, slab = Article)
+m_PM2
+
+m_PSD2 = rma(yi, vi, data = d_PSD2, slab = Article)
+m_PSD2
+
+#Get forest plot
+forest(m_PM2)
+forest(m_PSD2)
+```
+
+
+
+```{r}
+
+
+```
